@@ -30,6 +30,8 @@ class CreateSSL
             'pk' => $input['private'] ?? null,
             'expires_at' => $input['type'] === SslType::LETSENCRYPT ? now()->addMonths(3) : $input['expires_at'],
             'status' => SslStatus::CREATING,
+            'email' => $input['email'] ?? null,
+            'is_active' => ! $site->activeSsl,
         ]);
         $ssl->domains = [$site->domain];
         if (isset($input['aliases']) && $input['aliases']) {
@@ -44,7 +46,7 @@ class CreateSSL
             $webserver->setupSSL($ssl);
             $ssl->status = SslStatus::CREATED;
             $ssl->save();
-            $site->type()->edit();
+            $webserver->updateVHost($site);
         })->catch(function () use ($ssl) {
             $ssl->status = SslStatus::FAILED;
             $ssl->save();
@@ -66,6 +68,12 @@ class CreateSSL
                 'required',
                 'date_format:Y-m-d',
                 'after_or_equal:'.now(),
+            ];
+        }
+        if (isset($input['type']) && $input['type'] == SslType::LETSENCRYPT) {
+            $rules['email'] = [
+                'required',
+                'email',
             ];
         }
 

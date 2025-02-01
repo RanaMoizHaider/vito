@@ -44,14 +44,21 @@ class SslTest extends TestCase
         ])
             ->callAction('create', [
                 'type' => SslType::LETSENCRYPT,
+                'email' => 'ssl@example.com',
             ])
             ->assertSuccessful();
+
+        $ssl = Ssl::query()->where('site_id', $this->site->id)->first();
+        $this->assertNotEmpty($ssl);
 
         $this->assertDatabaseHas('ssls', [
             'site_id' => $this->site->id,
             'type' => SslType::LETSENCRYPT,
             'status' => SslStatus::CREATED,
             'domains' => json_encode([$this->site->domain]),
+            'email' => 'ssl@example.com',
+            'certificate_path' => '/etc/letsencrypt/live/'.$ssl->id.'/fullchain.pem',
+            'pk_path' => '/etc/letsencrypt/live/'.$ssl->id.'/privkey.pem',
         ]);
     }
 
@@ -67,6 +74,7 @@ class SslTest extends TestCase
         ])
             ->callAction('create', [
                 'type' => SslType::LETSENCRYPT,
+                'email' => 'ssl@example.com',
                 'aliases' => true,
             ])
             ->assertSuccessful();
@@ -76,6 +84,7 @@ class SslTest extends TestCase
             'type' => SslType::LETSENCRYPT,
             'status' => SslStatus::CREATED,
             'domains' => json_encode(array_merge([$this->site->domain], $this->site->aliases)),
+            'email' => 'ssl@example.com',
         ]);
     }
 
@@ -97,10 +106,16 @@ class SslTest extends TestCase
             ])
             ->assertSuccessful();
 
+        $ssl = Ssl::query()->where('site_id', $this->site->id)->first();
+        $this->assertNotEmpty($ssl);
+
         $this->assertDatabaseHas('ssls', [
             'site_id' => $this->site->id,
             'type' => SslType::CUSTOM,
             'status' => SslStatus::CREATED,
+            'domains' => json_encode([$this->site->domain]),
+            'certificate_path' => '/etc/ssl/'.$ssl->id.'/cert.pem',
+            'pk_path' => '/etc/ssl/'.$ssl->id.'/privkey.pem',
         ]);
     }
 

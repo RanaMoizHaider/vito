@@ -7,9 +7,8 @@ use App\Actions\Site\UpdateBranch;
 use App\Actions\Site\UpdateDeploymentScript;
 use App\Actions\Site\UpdateEnv;
 use App\Enums\SiteFeature;
-use App\Models\ServerLog;
+use App\Enums\SiteType;
 use App\Web\Fields\CodeEditorField;
-use App\Web\Pages\Servers\Logs\Widgets\LogsList;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\TextInput;
@@ -60,16 +59,10 @@ class View extends Page
             if (in_array(SiteFeature::DEPLOYMENT, $this->site->type()->supportedFeatures())) {
                 $widgets[] = [Widgets\DeploymentsList::class, ['site' => $this->site]];
             }
-        }
 
-        if (auth()->user()->can('viewAny', [ServerLog::class, $this->server])) {
-            $widgets[] = [
-                LogsList::class, [
-                    'server' => $this->server,
-                    'site' => $this->site,
-                    'label' => 'Logs',
-                ],
-            ];
+            if ($this->site->type === SiteType::LOAD_BALANCER) {
+                $widgets[] = [Widgets\LoadBalancerServers::class, ['site' => $this->site]];
+            }
         }
 
         return $widgets;
@@ -89,7 +82,9 @@ class View extends Page
 
         if (in_array(SiteFeature::DEPLOYMENT, $this->site->type()->supportedFeatures())) {
             $actions[] = $this->deployAction();
-            $actionsGroup[] = $this->autoDeploymentAction();
+            if ($this->site->sourceControl) {
+                $actionsGroup[] = $this->autoDeploymentAction();
+            }
             $actionsGroup[] = $this->deploymentScriptAction();
         }
 

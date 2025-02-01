@@ -17,9 +17,13 @@ use Illuminate\Support\Str;
  * @property Carbon $expires_at
  * @property string $status
  * @property Site $site
- * @property string $ca_path
  * @property ?array $domains
  * @property int $log_id
+ * @property string $email
+ * @property bool $is_active
+ * @property string $certificate_path
+ * @property string $pk_path
+ * @property string $ca_path
  * @property ?ServerLog $log
  */
 class Ssl extends AbstractModel
@@ -36,6 +40,11 @@ class Ssl extends AbstractModel
         'status',
         'domains',
         'log_id',
+        'email',
+        'is_active',
+        'certificate_path',
+        'pk_path',
+        'ca_path',
     ];
 
     protected $casts = [
@@ -46,6 +55,7 @@ class Ssl extends AbstractModel
         'expires_at' => 'datetime',
         'domains' => 'array',
         'log_id' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     public static array $statusColors = [
@@ -60,58 +70,6 @@ class Ssl extends AbstractModel
         return $this->belongsTo(Site::class);
     }
 
-    public function getCertsDirectoryPath(): ?string
-    {
-        if ($this->type == 'letsencrypt') {
-            return '/etc/letsencrypt/live/'.$this->site->domain;
-        }
-
-        if ($this->type == 'custom') {
-            return '/etc/ssl/'.$this->site->domain;
-        }
-
-        return '';
-    }
-
-    public function getCertificatePath(): ?string
-    {
-        if ($this->type == 'letsencrypt') {
-            return $this->certificate;
-        }
-
-        if ($this->type == 'custom') {
-            return $this->getCertsDirectoryPath().'/cert.pem';
-        }
-
-        return '';
-    }
-
-    public function getPkPath(): ?string
-    {
-        if ($this->type == 'letsencrypt') {
-            return $this->pk;
-        }
-
-        if ($this->type == 'custom') {
-            return $this->getCertsDirectoryPath().'/privkey.pem';
-        }
-
-        return '';
-    }
-
-    public function getCaPath(): ?string
-    {
-        if ($this->type == 'letsencrypt') {
-            return $this->ca;
-        }
-
-        if ($this->type == 'custom') {
-            return $this->getCertsDirectoryPath().'/fullchain.pem';
-        }
-
-        return '';
-    }
-
     public function validateSetup(string $result): bool
     {
         if (! Str::contains($result, 'Successfully received certificate')) {
@@ -119,8 +77,8 @@ class Ssl extends AbstractModel
         }
 
         if ($this->type == 'letsencrypt') {
-            $this->certificate = $this->getCertsDirectoryPath().'/fullchain.pem';
-            $this->pk = $this->getCertsDirectoryPath().'/privkey.pem';
+            $this->certificate_path = '/etc/letsencrypt/live/'.$this->id.'/fullchain.pem';
+            $this->pk_path = '/etc/letsencrypt/live/'.$this->id.'/privkey.pem';
             $this->save();
         }
 
